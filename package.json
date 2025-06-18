@@ -1,0 +1,28 @@
+{
+  "name": "canadian-dealer-scraper",
+  "version": "1.0.0",
+  "main": "app-csv.js",
+  "scripts": {
+    "start": "node app-csv.js",
+    "dev": "nodemon app-csv.js",
+    "test": "echo \"No tests yet\" && exit 0",
+    "scan-dealers": "node auto-dealer-scanner.js scan",
+    "schedule-scan": "node auto-dealer-scanner.js schedule",
+    "force-update": "node auto-dealer-scanner.js force",
+    "setup-scanner": "node dealer-setup.js",
+    "validate-urls": "node url-validator.js",
+    "test-scanner": "node auto-dealer-scanner.js test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.10.0",
+    "cheerio": "^1.1.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "nodemon": "^3.1.10",
+    "puppeteer": "^24.10.1"
+  }
+}
