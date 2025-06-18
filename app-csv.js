@@ -562,6 +562,7 @@ app.get('/stock', async (req, res) => {
 });
 
 // Simple HTML interface
+// Enhanced HTML interface with all features restored
 app.get('/', (req, res) => {
   const brands = [...new Set(dealersDatabase.map(d => d.brand))].sort();
   
@@ -569,52 +570,358 @@ app.get('/', (req, res) => {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>GTA Dealer Scraper</title>
+      <title>GTA Dealer Finder & Inventory Scraper</title>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
-        .section { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
-        .btn { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
-        .btn:hover { background: #0056b3; }
-        .btn:disabled { background: #ccc; cursor: not-allowed; }
-        .status { padding: 15px; margin: 10px 0; border-radius: 5px; }
-        .success { background: #d4edda; color: #155724; }
-        .error { background: #f8d7da; color: #721c24; }
-        .info { background: #d1ecf1; color: #0c5460; }
-        input { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
-        .results { margin-top: 20px; }
-        .dealer-card { border: 1px solid #007bff; margin: 10px 0; padding: 15px; border-radius: 5px; }
+        body { 
+          font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: #333;
+          margin: 0;
+          padding: 20px;
+          min-height: 100vh;
+        }
+        .container {
+          max-width: 1000px;
+          margin: 0 auto;
+          background: white;
+          border-radius: 15px;
+          overflow: hidden;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .header {
+          background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+          color: white;
+          padding: 30px;
+          text-align: center;
+        }
+        .header h1 {
+          margin: 0;
+          font-size: 2.5em;
+          font-weight: 700;
+        }
+        .header p {
+          margin: 10px 0 0 0;
+          opacity: 0.9;
+          font-size: 1.1em;
+        }
+        .section {
+          padding: 30px;
+          border-bottom: 1px solid #f0f0f0;
+        }
+        .section:last-child { border-bottom: none; }
+        .section h2 {
+          color: #333;
+          margin-bottom: 20px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .search-input {
+          width: 300px;
+          padding: 12px 16px;
+          font-size: 16px;
+          border: 2px solid #e0e0e0;
+          border-radius: 10px;
+          transition: border-color 0.3s ease;
+        }
+        .search-input:focus {
+          outline: none;
+          border-color: #007bff;
+        }
+        .btn {
+          background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 10px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          margin: 5px;
+        }
+        .btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
+        }
+        .btn:disabled {
+          background: #6c757d;
+          cursor: not-allowed;
+          transform: none;
+        }
+        .brand-btn { 
+          background: #f8f9fa; 
+          border: 1px solid #dee2e6; 
+          margin: 3px; 
+          padding: 8px 12px; 
+          cursor: pointer;
+          border-radius: 6px;
+          transition: all 0.2s ease;
+          color: #495057;
+        }
+        .brand-btn:hover { 
+          background: #007bff;
+          color: white;
+          border-color: #007bff;
+        }
+        .scrape-btn {
+          background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+          color: white;
+        }
+        .scrape-btn:hover {
+          box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+        }
+        .status {
+          padding: 15px;
+          margin: 15px 0;
+          border-radius: 8px;
+          font-weight: 500;
+        }
+        .success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+        .error { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
+        .info { background: #d1ecf1; color: #0c5460; border-left: 4px solid #17a2b8; }
+        .warning { background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; }
+        .dealer-card { 
+          border: 2px solid #007bff; 
+          padding: 20px; 
+          margin: 15px 0; 
+          border-radius: 12px; 
+          background: white; 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          transition: transform 0.2s ease;
+        }
+        .dealer-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+        .dealer-card h4 { 
+          color: #007bff; 
+          margin: 0 0 15px 0; 
+          font-size: 18px;
+        }
+        .dealer-card p { 
+          color: #333; 
+          margin: 8px 0; 
+          font-size: 14px;
+        }
+        .dealer-card strong { color: #000; }
+        .dealer-card a { 
+          color: #007bff; 
+          text-decoration: none;
+        }
+        .dealer-card a:hover { text-decoration: underline; }
+        .search-history {
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          padding: 15px;
+          border-radius: 10px;
+          margin: 20px 0;
+          border-left: 4px solid #007bff;
+        }
+        .history-item {
+          display: inline-block;
+          background: #007bff;
+          color: white;
+          padding: 6px 12px;
+          margin: 3px;
+          border-radius: 15px;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .history-item:hover {
+          background: #0056b3;
+          transform: scale(1.05);
+        }
+        .clear-btn {
+          background: #dc3545;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 15px;
+          font-size: 12px;
+          cursor: pointer;
+          margin-left: 10px;
+        }
+        .clear-btn:hover { background: #c82333; }
+        .results-header {
+          color: #007bff;
+          font-size: 20px;
+          margin: 20px 0;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .loading {
+          display: inline-block;
+          width: 20px;
+          height: 20px;
+          border: 3px solid #f3f3f3;
+          border-top: 3px solid #007bff;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-right: 10px;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 15px;
+          margin: 20px 0;
+        }
+        .stat-card {
+          background: white;
+          padding: 15px;
+          border-radius: 8px;
+          text-align: center;
+          border: 1px solid #e0e0e0;
+        }
+        .stat-number {
+          font-size: 2em;
+          font-weight: 700;
+          margin-bottom: 5px;
+        }
+        .stat-label {
+          color: #6c757d;
+          font-size: 0.9em;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .success-color { color: #28a745; }
+        .error-color { color: #dc3545; }
+        .info-color { color: #17a2b8; }
       </style>
     </head>
     <body>
       <div class="container">
-        <h1>🏙️ GTA Dealer Scraper</h1>
-        
+        <div class="header">
+          <h1>🏙️ GTA Dealer Finder & Inventory Scraper</h1>
+          <p>Search dealers and scrape vehicle inventory across the Greater Toronto Area</p>
+        </div>
+
         <div class="section">
           <h2>🔍 Search Dealers</h2>
-          <input type="text" id="brand" placeholder="Enter brand name..." style="width: 200px;">
-          <button class="btn" onclick="search()">Search</button>
-          <div id="searchResults"></div>
+          <div style="margin-bottom: 20px;">
+            <input list="brands" id="brand" placeholder="Choose a brand..." 
+                   class="search-input" onkeypress="handleEnter(event)">
+            <datalist id="brands">
+              ${brands.map(b => '<option value="' + b + '">').join('')}
+            </datalist>
+            
+            <button onclick="search()" class="btn">🔍 Search</button>
+          </div>
+          
+          <div>
+            <strong>Quick Select:</strong><br>
+            ${brands.map(b => '<button class="brand-btn" onclick="quickSearch(\'' + b + '\')">' + b + '</button>').join('')}
+          </div>
+          
+          <div id="searchHistory" style="display: none;"></div>
         </div>
-        
+
         <div class="section">
           <h2>🚗 Vehicle Inventory Scraper</h2>
-          <p>Scrape vehicle inventory from dealer websites:</p>
+          <p><strong>Current Database:</strong> 640 vehicles from 129 dealers (Protected - Manual scraping only)</p>
           
-          <button class="btn" onclick="startScraping(3)" id="testBtn">🧪 Test Scrape (3 Dealers)</button>
-          <button class="btn" onclick="startScraping()" id="fullBtn">🔄 Full Scrape (All Dealers)</button>
-          <button class="btn" onclick="checkStatus()">📊 Check Status</button>
-          <button class="btn" onclick="viewStock()">📋 View Stock</button>
+          <div style="text-align: center; margin: 20px 0;">
+            <button class="btn scrape-btn" onclick="startScraping(3)" id="testBtn">🧪 Test Scrape (3 Dealers)</button>
+            <button class="btn scrape-btn" onclick="startScraping(10)" id="smallBtn">🔄 Small Scrape (10 Dealers)</button>
+            <button class="btn scrape-btn" onclick="startScraping()" id="fullBtn">🚀 Full Scrape (All Dealers)</button>
+            <button class="btn" onclick="checkStatus()">📊 Check Status</button>
+            <button class="btn" onclick="viewStock()">📋 View Stock (640 vehicles)</button>
+          </div>
           
           <div id="scrapeStatus"></div>
-          <div id="scrapeResults"></div>
         </div>
+        
+        <div id="results" class="section"></div>
       </div>
       
       <script>
+        let searchHistory = [];
+        
+        // Load search history on page load
+        window.onload = function() {
+          loadSearchHistory();
+          displaySearchHistory();
+          checkStatus();
+        };
+        
+        function loadSearchHistory() {
+          try {
+            const stored = localStorage.getItem('dealerSearchHistory');
+            if (stored) {
+              searchHistory = JSON.parse(stored);
+              searchHistory = searchHistory.slice(-10);
+            }
+          } catch (e) {
+            searchHistory = [];
+          }
+        }
+        
+        function saveSearchHistory() {
+          try {
+            localStorage.setItem('dealerSearchHistory', JSON.stringify(searchHistory));
+          } catch (e) {
+            console.log('Could not save search history');
+          }
+        }
+        
+        function displaySearchHistory() {
+          const historyDiv = document.getElementById('searchHistory');
+          if (searchHistory.length > 0) {
+            let historyHTML = '<div class="search-history">';
+            historyHTML += '<strong>Recent Searches:</strong> ';
+            
+            const uniqueSearches = [...new Set(searchHistory.slice().reverse())].slice(0, 5);
+            
+            uniqueSearches.forEach(brand => {
+              historyHTML += '<span class="history-item" onclick="quickSearch(\\''+brand+'\\')">' + brand + '</span>';
+            });
+            
+            historyHTML += '<button class="clear-btn" onclick="clearHistory()">Clear</button>';
+            historyHTML += '</div>';
+            
+            historyDiv.innerHTML = historyHTML;
+            historyDiv.style.display = 'block';
+          } else {
+            historyDiv.style.display = 'none';
+          }
+        }
+        
+        function addToHistory(brand) {
+          if (brand && brand.trim() !== '') {
+            searchHistory = searchHistory.filter(item => item.toLowerCase() !== brand.toLowerCase());
+            searchHistory.push(brand);
+            if (searchHistory.length > 10) {
+              searchHistory = searchHistory.slice(-10);
+            }
+            saveSearchHistory();
+            displaySearchHistory();
+          }
+        }
+        
+        function clearHistory() {
+          searchHistory = [];
+          localStorage.removeItem('dealerSearchHistory');
+          displaySearchHistory();
+        }
+        
+        // Handle Enter key press
+        function handleEnter(event) {
+          if (event.key === 'Enter') {
+            search();
+          }
+        }
+        
         function search() {
           const brand = document.getElementById('brand').value;
           if (!brand) return;
+          
+          addToHistory(brand);
           
           fetch('/search', {
             method: 'POST',
@@ -623,31 +930,46 @@ app.get('/', (req, res) => {
           })
           .then(r => r.json())
           .then(dealers => {
-            let html = '<h3>Found ' + dealers.length + ' ' + brand + ' dealers:</h3>';
-            dealers.forEach(d => {
-              html += '<div class="dealer-card">';
-              html += '<h4>' + d.name + '</h4>';
-              html += '<p>Address: ' + d.address + '</p>';
-              html += '<p>Phone: ' + d.phone + '</p>';
-              html += '<p>Website: <a href="' + d.website + '" target="_blank">' + d.website + '</a></p>';
-              html += '</div>';
-            });
-            document.getElementById('searchResults').innerHTML = html;
+            const resultsHTML = 
+              '<h3 class="results-header">✅ Found ' + dealers.length + ' ' + brand + ' dealers</h3>' +
+              dealers.map(d => 
+                '<div class="dealer-card">' +
+                  '<h4>' + d.name + '</h4>' +
+                  '<p><strong>📍 Address:</strong> ' + d.address + '</p>' +
+                  '<p><strong>🏙️ City:</strong> ' + d.city + '</p>' +
+                  '<p><strong>📞 Phone:</strong> ' + d.phone + '</p>' +
+                  '<p><strong>🌐 Website:</strong> <a href="' + d.website + '" target="_blank" rel="noopener">' + d.website + '</a></p>' +
+                '</div>'
+              ).join('');
+            
+            document.getElementById('results').innerHTML = resultsHTML;
+            
+            // Update URL for proper browser navigation
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('search', brand);
+            window.history.pushState({brand: brand, results: resultsHTML}, '', newUrl);
           })
           .catch(error => {
-            document.getElementById('searchResults').innerHTML = '<div class="error">Search failed</div>';
+            document.getElementById('results').innerHTML = '<div class="status error">❌ Search failed</div>';
           });
+        }
+        
+        function quickSearch(brand) {
+          document.getElementById('brand').value = brand;
+          search();
         }
         
         function startScraping(maxDealers) {
           const testBtn = document.getElementById('testBtn');
+          const smallBtn = document.getElementById('smallBtn');
           const fullBtn = document.getElementById('fullBtn');
           const statusDiv = document.getElementById('scrapeStatus');
           
           testBtn.disabled = true;
+          smallBtn.disabled = true;
           fullBtn.disabled = true;
           
-          statusDiv.innerHTML = '<div class="info">🔄 Starting scraper...</div>';
+          statusDiv.innerHTML = '<div class="status info"><span class="loading"></span>Starting scraper...</div>';
           
           fetch('/scrape/start', {
             method: 'POST',
@@ -656,22 +978,23 @@ app.get('/', (req, res) => {
           })
           .then(r => r.json())
           .then(data => {
-            statusDiv.innerHTML = '<div class="success">✅ Scraping started! Check status for updates.</div>';
+            statusDiv.innerHTML = '<div class="status success">✅ Scraping started! Monitor progress below.</div>';
             
-            // Poll for updates
             const interval = setInterval(() => {
               checkStatus().then(status => {
                 if (!status.inProgress) {
                   clearInterval(interval);
                   testBtn.disabled = false;
+                  smallBtn.disabled = false;
                   fullBtn.disabled = false;
                 }
               });
             }, 5000);
           })
           .catch(error => {
-            statusDiv.innerHTML = '<div class="error">❌ Failed to start scraping</div>';
+            statusDiv.innerHTML = '<div class="status error">❌ Failed to start scraping</div>';
             testBtn.disabled = false;
+            smallBtn.disabled = false;
             fullBtn.disabled = false;
           });
         }
@@ -683,22 +1006,31 @@ app.get('/', (req, res) => {
               const statusDiv = document.getElementById('scrapeStatus');
               
               if (status.inProgress) {
-                statusDiv.innerHTML = '<div class="info">🔄 Scraping in progress...</div>';
+                statusDiv.innerHTML = '<div class="status info">🔄 Scraping in progress...</div>';
               } else if (status.lastResults && status.lastResults.length > 0) {
                 const results = status.lastResults;
                 const successCount = results.filter(r => r.status === 'success').length;
                 const totalVehicles = results.reduce((sum, r) => sum + (r.vehicles?.length || 0), 0);
                 
-                let html = '<div class="success">✅ Last scrape completed:<br>';
-                html += 'Success: ' + successCount + '/' + results.length + ' dealers<br>';
-                html += 'Vehicles found: ' + totalVehicles + '</div>';
+                let html = '<div class="stats-grid">';
+                html += '<div class="stat-card"><div class="stat-number success-color">' + successCount + '</div><div class="stat-label">Successful</div></div>';
+                html += '<div class="stat-card"><div class="stat-number error-color">' + (results.length - successCount) + '</div><div class="stat-label">Failed</div></div>';
+                html += '<div class="stat-card"><div class="stat-number info-color">' + totalVehicles + '</div><div class="stat-label">Vehicles Found</div></div>';
+                html += '<div class="stat-card"><div class="stat-number">' + results.length + '</div><div class="stat-label">Total Dealers</div></div>';
+                html += '</div>';
+                
+                html += '<div class="status success">✅ Last scrape completed! Data will be saved to a new CSV file.</div>';
                 
                 statusDiv.innerHTML = html;
               } else {
-                statusDiv.innerHTML = '<div class="info">ℹ️ No scraping performed yet</div>';
+                statusDiv.innerHTML = '<div class="status info">ℹ️ No recent scraping. Your 640-vehicle database is protected.</div>';
               }
               
               return status;
+            })
+            .catch(error => {
+              document.getElementById('scrapeStatus').innerHTML = 
+                '<div class="status error">❌ Failed to check status</div>';
             });
         }
         
@@ -706,42 +1038,78 @@ app.get('/', (req, res) => {
           fetch('/stock')
             .then(r => r.json())
             .then(data => {
-              let html = '<h3>📋 Stock Data (' + data.totalVehicles + ' vehicles)</h3>';
-              html += '<p>Last updated: ' + new Date(data.lastUpdated).toLocaleString() + '</p>';
+              let html = '<h3 class="results-header">📋 Current Stock Data (' + data.totalVehicles + ' vehicles)</h3>';
+              html += '<p><strong>Last updated:</strong> ' + new Date(data.lastUpdated).toLocaleString() + '</p>';
               
               if (data.vehicles.length > 0) {
-                html += '<div style="max-height: 400px; overflow-y: auto;">';
-                data.vehicles.slice(0, 20).forEach(v => {
-                  html += '<div style="border: 1px solid #ddd; margin: 5px 0; padding: 10px; border-radius: 4px;">';
-                  html += '<strong>' + v.year + ' ' + v.make + ' ' + v.model + '</strong><br>';
-                  html += 'Dealer: ' + v.dealer + '<br>';
-                  if (v.price) html += 'Price: $' + v.price + '<br>';
+                // Group by dealer for better organization
+                const byDealer = {};
+                data.vehicles.forEach(vehicle => {
+                  if (!byDealer[vehicle.dealer]) {
+                    byDealer[vehicle.dealer] = [];
+                  }
+                  byDealer[vehicle.dealer].push(vehicle);
+                });
+                
+                html += '<div style="max-height: 600px; overflow-y: auto; margin-top: 20px;">';
+                
+                Object.entries(byDealer).slice(0, 15).forEach(([dealer, vehicles]) => {
+                  html += '<div class="dealer-card">';
+                  html += '<h4>' + dealer + ' (' + vehicles.length + ' vehicles)</h4>';
+                  
+                  vehicles.slice(0, 3).forEach(vehicle => {
+                    html += '<div style="padding: 12px; margin: 8px 0; background: #f8f9fa; border-radius: 8px; border-left: 3px solid #007bff;">';
+                    html += '<strong>' + (vehicle.year || '') + ' ' + (vehicle.make || '') + ' ' + (vehicle.model || '') + '</strong><br>';
+                    if (vehicle.trim && vehicle.trim !== '') html += 'Trim: ' + vehicle.trim + '<br>';
+                    if (vehicle.price && vehicle.price !== '') html += '💰 Price: $' + vehicle.price + '<br>';
+                    if (vehicle.stock && vehicle.stock !== '') html += '📋 Stock: ' + vehicle.stock + '<br>';
+                    html += '<small>🔗 <a href="' + vehicle.sourceUrl + '" target="_blank">View Source</a></small>';
+                    html += '</div>';
+                  });
+                  
+                  if (vehicles.length > 3) {
+                    html += '<p><em>... and ' + (vehicles.length - 3) + ' more vehicles</em></p>';
+                  }
+                  
                   html += '</div>';
                 });
-                html += '</div>';
                 
-                if (data.vehicles.length > 20) {
-                  html += '<p>... and ' + (data.vehicles.length - 20) + ' more vehicles</p>';
-                }
+                html += '</div>';
+                html += '<div class="status info">💾 Complete database: 640 vehicles across 10 brands. Showing top 15 dealers with sample vehicles.</div>';
               }
               
-              document.getElementById('scrapeResults').innerHTML = html;
+              document.getElementById('results').innerHTML = html;
             })
             .catch(error => {
-              document.getElementById('scrapeResults').innerHTML = '<div class="error">No stock data available yet</div>';
+              document.getElementById('results').innerHTML = '<div class="status warning">📭 Stock data not available</div>';
             });
         }
         
-        // Check status on page load
-        window.onload = function() {
-          checkStatus();
-        };
+        // Handle browser navigation
+        window.addEventListener('popstate', function(event) {
+          if (event.state) {
+            document.getElementById('brand').value = event.state.brand || '';
+            document.getElementById('results').innerHTML = event.state.results || '';
+          } else {
+            document.getElementById('brand').value = '';
+            document.getElementById('results').innerHTML = '';
+          }
+        });
+        
+        // Handle URL parameters on page load
+        window.addEventListener('load', function() {
+          const urlParams = new URLSearchParams(window.location.search);
+          const searchParam = urlParams.get('search');
+          if (searchParam) {
+            document.getElementById('brand').value = searchParam;
+            search();
+          }
+        });
       </script>
     </body>
     </html>
   `);
 });
-
 app.listen(3002, () => {
   console.log('🚀 GTA Dealer Scraper running on http://localhost:3002');
   console.log('✅ Features: Search dealers, scrape inventory, save to CSV');
